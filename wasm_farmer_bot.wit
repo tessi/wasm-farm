@@ -1,0 +1,99 @@
+package tessenow:wasm-farmer;
+
+world wasm-farmer-bot {
+    enum plant-type {
+        wheat,
+        grass,
+    }
+
+    record plant {
+        plant-type: plant-type,
+        growth-stage: u32,
+        growth-stage-max: u32,
+    }
+
+    variant action {
+        idle,
+        move-left,
+        move-right,
+        move-up,
+        move-down,
+        water,
+        seed(plant-type),
+        harvest,
+    }
+
+    enum sellable {
+      grass,
+      wheat,
+    }
+
+    enum buyable {
+      water,
+      seeds,
+      energy,
+    }
+
+    record position {
+      x: u32,
+      y: u32,
+    }
+
+    record bot-state {
+      id: string,
+      display-name: string,
+      current-action: action,
+      energy: u32,
+      water: u32,
+      seeds: u32,
+      position: position,
+    }
+
+    record farm-state {
+      grass: u32,
+      wheat: u32,
+      fields-width: u32,
+      fields-height: u32,
+      fields: list<list<field>>,
+    }
+
+    record field {
+      plant: option<plant>,
+      watered: bool,
+      field-type: field-type,
+      entities: list<entity>,
+    }
+
+    enum entity-type {
+      bot,
+    }
+
+    record entity {
+      id: string,
+      display-name: option<string>,
+      entity-type: entity-type,
+      position: position,
+    }
+
+    enum field-type {
+      owned,
+      unowned,
+      stone,
+    }
+
+    enum log-level {
+      debug,
+      info,
+      warn,
+      error,
+    }
+    import sell: func(sell: sellable, amount: u32) -> result<_, string>;
+    import buy: func(buy: buyable, amount: u32) -> result<_, string>;
+    import bot-action: func(action: action);
+    import update-display-name: func(display-name: string);
+    import get-farm: func() -> farm-state;
+    import get-bot-state: func(id: string) -> bot-state;
+    import log: func(message: string, level: log-level);
+
+    export tick: func(bot: bot-state);
+}

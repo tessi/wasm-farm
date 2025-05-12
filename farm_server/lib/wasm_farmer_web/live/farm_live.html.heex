@@ -1,0 +1,242 @@
+<div class="container mx-auto p-4">
+  <h1 class="text-2xl font-bold mb-4">Wasm Farmer</h1>
+
+  <%= if @farm do %>
+    <div class="mb-4">
+      <div class="flex gap-4">
+        <div>
+          <span class="font-semibold">Money:</span> {@farm.money}
+        </div>
+        <div>
+          <span class="font-semibold">Wheat:</span> {@farm.resources.wheat}
+        </div>
+        <div>
+          <span class="font-semibold">Grass:</span> {@farm.resources.grass}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <%= for y <- 0..(@farm.height-1) do %>
+        <div class="flex gap-1">
+          <%= for x <- 0..(@farm.width-1) do %>
+            <div class="w-12 h-12 border border-gray-300 relative" tabindex="0" phx-keydown="keydown">
+              <div class="absolute inset-0 flex items-center justify-center text-2xl">
+                <% field=@farm.fields[{x, y}] %>
+                  <% {bg_color, icon}=field_color(field) %>
+                    <% bots_at_position=Enum.filter(@farm.bots, fn {_id, b} -> b.x == x and b.y == y end) %>
+                      <% icon=case bots_at_position do [] ->
+                        icon
+
+                        bots ->
+                        case Enum.find(bots, fn {id, _} -> id == assigns[:bot_id] end) do
+                        {_id, owned_bot} ->
+                        bot_icon(owned_bot, true)
+
+                        nil ->
+                        {_id, other_bot} = hd(bots)
+
+                        Phoenix.HTML.raw("""
+                        <div class="group relative">
+                          <div
+                            class="invisible group-hover:visible absolute -top-8 left-1/2 -translate-x-1/2 bg-white px-2 py-1 rounded shadow text-sm whitespace-nowrap">
+                            #{Enum.map_join(bots, ", ", fn {id, bot} -> "#{bot.display_name || random_bot_name(id)}"
+                            end)}
+                          </div>
+                          #{bot_icon(other_bot, false)}
+                        </div>
+                        """)
+                        end
+                        end %>
+                        <div class={"w-full h-full #{bg_color} flex items-center justify-center"}>
+                          {icon}
+                        </div>
+              </div>
+            </div>
+            <% end %>
+        </div>
+        <% end %>
+    </div>
+
+    <div class="mt-4">
+      <h2 class="text-xl font-bold">Bots</h2>
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-wrap gap-4">
+          <%= for {bot_id, bot} <- Enum.sort_by(@farm.bots, fn {id, _} -> if id == assigns[:bot_id], do: 0, else: 1 end)
+            do %>
+            <div class="flex flex-col gap-2 p-4 border rounded-lg">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">{bot_icon(bot, bot_id == assigns[:bot_id])}</span>
+                <%= if bot_id==assigns[:bot_id] do %>
+                  <input type="text" value={bot.display_name || random_bot_name(bot_id)} phx-blur="update_display_name"
+                    phx-value-bot_id={bot_id} class="px-2 py-1 border rounded" />
+                  <% else %>
+                    <span>{bot.display_name || random_bot_name(bot_id)}</span>
+                    <% end %>
+              </div>
+              <div class="flex flex-col gap-1">
+                <span>Action: {bot.current_action || "idle"}</span>
+                <span>Energy: {bot.energy}</span>
+                <span>Water: {bot.water}</span>
+                <span>Seeds: {bot.seeds}</span>
+                <span>Position: {bot.x}, {bot.y}</span>
+              </div>
+              <%= if bot_id==assigns[:bot_id] do %>
+                <div class="flex flex-col gap-2">
+                  <div class="flex gap-2">
+                    <button phx-click="bot_action" phx-value-bot_id={bot_id} phx-value-action="move_left"
+                      class="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                      ←
+                    </button>
+                    <button phx-click="bot_action" phx-click="bot_action" phx-value-bot_id={bot_id}
+                      phx-value-action="move_right" class="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                      →
+                    </button>
+                    <button phx-click="bot_action" phx-value-bot_id={bot_id} phx-value-action="move_up"
+                      class="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                      ↑
+                    </button>
+                    <button phx-click="bot_action" phx-value-bot_id={bot_id} phx-value-action="move_down"
+                      class="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                      ↓
+                    </button>
+                  </div>
+                  <div class="flex gap-2">
+                    <button phx-click="bot_action" phx-value-bot_id={bot_id} phx-value-action="seed"
+                      class="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+                      Seed
+                    </button>
+                    <button phx-click="bot_action" phx-value-bot_id={bot_id} phx-value-action="harvest"
+                      class="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+                      Harvest
+                    </button>
+                    <button phx-click="bot_action" phx-value-bot_id={bot_id} phx-value-action="water"
+                      class="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+                      Water
+                    </button>
+                    <button phx-click="bot_action" phx-value-bot_id={bot_id} phx-value-action="plow"
+                      class="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+                      Plow
+                    </button>
+                  </div>
+                  <div class="flex gap-2">
+                    <button phx-click="buy" phx-value-bot_id={bot_id} phx-value-resource="energy" phx-value-amount="10"
+                      class="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                      Buy Energy
+                    </button>
+                    <button phx-click="buy" phx-value-bot_id={bot_id} phx-value-resource="seeds"
+                      phx-value-amount="1" class="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                      Buy Seeds
+                    </button>
+                    <button phx-click="buy" phx-value-bot_id={bot_id} phx-value-resource="water" phx-value-amount="10"
+                      class="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                      Buy Water
+                    </button>
+                  </div>
+                </div>
+                <% end %>
+            </div>
+            <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%= if assigns[:bot_id] do %>
+      <div class="mt-4">
+        <h2 class="text-xl font-bold">Market</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <h3 class="text-lg font-semibold mb-2">Sell</h3>
+            <div class="flex gap-2">
+              <button phx-click="sell" phx-value-resource="wheat" phx-value-amount="1"
+                class="bg-green-500 text-white px-4 py-2 rounded">
+                Sell Wheat
+              </button>
+              <button phx-click="sell" phx-value-resource="grass" phx-value-amount="1"
+                class="bg-green-500 text-white px-4 py-2 rounded">
+                Sell Grass
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% end %>
+
+    <div class="mt-4">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xl font-bold">Bot Logs</h2>
+        <div class="flex gap-2">
+          <%= for level <- [:debug, :info, :warn, :error] do %>
+            <button
+              phx-click="set_log_level"
+              phx-value-level={level}
+              class={[
+                "px-3 py-1 rounded text-sm font-medium",
+                if log_level_weight(level) >= log_level_weight(@min_log_level) do
+                  case level do
+                    :debug -> "bg-gray-100 text-gray-700"
+                    :info -> "bg-blue-100 text-blue-700"
+                    :warn -> "bg-yellow-100 text-yellow-700"
+                    :error -> "bg-red-100 text-red-700"
+                  end
+                else
+                  "bg-gray-50 text-gray-400"
+                end
+              ]}
+            >
+              <%= String.upcase("#{level}") %>
+            </button>
+          <% end %>
+        </div>
+      </div>
+      <div class="h-64 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+        <%= for log <- Enum.filter(@farm.logs, fn log -> log_level_weight(log.level) >= log_level_weight(@min_log_level) end) do %>
+          <div class="mb-3">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-semibold text-blue-600">
+                <%= case log.bot_id do %>
+                  <% "system" -> %>
+                    System
+                  <% bot_id -> %>
+                    <%= case Map.get(@farm.bots, bot_id) do %>
+                      <% nil -> %>
+                        <%= bot_id %>
+                      <% bot -> %>
+                        <%= bot.display_name || random_bot_name(bot_id) %>
+                    <% end %>
+                  <% end %>
+              </span>
+              <span class={[
+                "text-xs px-2 py-0.5 rounded",
+                case log.level do
+                  :debug -> "bg-gray-100 text-gray-700"
+                  :info -> "bg-blue-100 text-blue-700"
+                  :warn -> "bg-yellow-100 text-yellow-700"
+                  :error -> "bg-red-100 text-red-700"
+                end
+              ]}>
+                <%= String.upcase("#{log.level}") %>
+              </span>
+              <span class="text-xs text-gray-500">
+                <%= Calendar.strftime(log.timestamp, "%H:%M:%S") %>
+              </span>
+            </div>
+            <div class={[
+              "pl-2",
+              case log.level do
+                :debug -> "text-gray-600"
+                :info -> "text-gray-700"
+                :warn -> "text-yellow-700"
+                :error -> "text-red-700"
+              end
+            ]}><%= log.message %></div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    <% else %>
+      <div class="text-center">
+        <p class="text-lg">Loading farm...</p>
+      </div>
+      <% end %>
+</div>
