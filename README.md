@@ -2,7 +2,7 @@
 
 This is a farm game built with Phoenix/LiveView and WebAssembly.
 
-<img src="https://github.com/tessi/wasm-farm/blob/main/wasm-farm.png" alt="Wasm Farm Screenshot" width="300"/>
+<img src="https://github.com/tessi/wasm-farm/blob/main/wasm_farm.png?raw=true" alt="Wasm Farm Screenshot" width="600"/>
 
 The goal of the game is to create a farm and seed, harvest, and sell crops.
 However, you can not directly do this. You need to control a farm bot which
